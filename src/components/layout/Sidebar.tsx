@@ -17,10 +17,15 @@ import {
   Check,
   X,
   Sun,
-  Moon
+  Moon,
+  Cloud,
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
 import type { Project } from '../../types';
 import { storageAdapter } from '../../services/storageAdapter';
+import { authService, type UserSession } from '../../services/authService';
+import { AuthModal } from '../auth/AuthModal';
 
 const PRESET_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', 
@@ -68,11 +73,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ onDataRefresh }) => {
     }
   };
 
+  // Auth & Cloud states
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(() => authService.getUser());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    const ok = await authService.syncToCloud();
+    setIsSyncing(false);
+    if (ok) {
+      setSyncStatus('Nuvem atualizada!');
+      setTimeout(() => setSyncStatus(null), 3000);
+    } else {
+      setSyncStatus('Modo local (MongoDB não conectado)');
+      setTimeout(() => setSyncStatus(null), 3000);
+    }
+  };
+
   useEffect(() => {
     loadData();
     const handleProjectChanged = () => loadData();
+    const handleAuthChanged = () => setCurrentUser(authService.getUser());
+
     window.addEventListener('dev_planner_project_changed', handleProjectChanged);
-    return () => window.removeEventListener('dev_planner_project_changed', handleProjectChanged);
+    window.addEventListener('dev_planner_auth_changed', handleAuthChanged);
+
+    return () => {
+      window.removeEventListener('dev_planner_project_changed', handleProjectChanged);
+      window.removeEventListener('dev_planner_auth_changed', handleAuthChanged);
+    };
   }, []);
 
   const navItems = [
@@ -323,6 +354,52 @@ export const Sidebar: React.FC<SidebarProps> = ({ onDataRefresh }) => {
           </div>
         )}
 
+        {/* Cloud Login & Sync Area */}
+        {currentUser ? (
+          <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-700/60 flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                {currentUser.name ? currentUser.name[0].toUpperCase() : 'U'}
+              </div>
+              <div className="truncate">
+                <p className="text-[11px] font-semibold text-white truncate leading-tight">{currentUser.name}</p>
+                <p className="text-[9px] text-slate-400 truncate">{currentUser.email}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={handleSync}
+                title="Sincronizar com MongoDB"
+                className="p-1 rounded-lg text-slate-400 hover:text-indigo-400 hover:bg-slate-800 transition-colors"
+              >
+                <RefreshCw size={13} className={isSyncing ? 'animate-spin text-indigo-400' : ''} />
+              </button>
+              <button
+                onClick={() => authService.logout()}
+                title="Sair da conta"
+                className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+              >
+                <LogOut size={13} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 text-xs font-semibold transition-colors border border-indigo-500/20"
+          >
+            <Cloud size={14} />
+            <span>Conectar Nuvem / Login</span>
+          </button>
+        )}
+
+        {syncStatus && (
+          <div className="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-[10px] text-center font-medium">
+            {syncStatus}
+          </div>
+        )}
+
         {/* Alternador de Tema Claro / Escuro */}
         <button
           onClick={toggleTheme}
@@ -450,6 +527,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ onDataRefresh }) => {
           </div>
         </div>
       )}
+
+      {/* Modal de Autenticação e Sincronização */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </aside>
   );
 };
