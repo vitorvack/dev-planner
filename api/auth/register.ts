@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import clientPromise from '../lib/mongodb.ts';
+import clientPromise from '../_lib/mongodb';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_planner_secret_jwt_key_change_in_prod';
 
