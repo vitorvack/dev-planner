@@ -376,7 +376,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onDataRefresh }) => {
                 <RefreshCw size={13} className={isSyncing ? 'animate-spin text-indigo-400' : ''} />
               </button>
               <button
-                onClick={() => authService.logout()}
+                onClick={() => {
+                  authService.logout();
+                  localStorage.removeItem('dev_planner_mode_choice');
+                  navigate('/welcome');
+                }}
                 title="Sair da conta"
                 className="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
               >
@@ -386,7 +390,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onDataRefresh }) => {
           </div>
         ) : (
           <button
-            onClick={() => setIsAuthModalOpen(true)}
+            onClick={() => navigate('/welcome')}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 text-xs font-semibold transition-colors border border-indigo-500/20"
           >
             <Cloud size={14} />
